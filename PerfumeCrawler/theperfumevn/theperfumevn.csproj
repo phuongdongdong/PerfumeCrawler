@@ -5,4 +5,11 @@
     <TargetFramework>net5.0</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="CsvHelper" Version="30.0.1" />
+    <PackageReference Include="DotNetSeleniumExtras.WaitHelpers" Version="3.11.0" />
+    <PackageReference Include="Selenium.Support" Version="4.9.0" />
+    <PackageReference Include="Selenium.WebDriver.ChromeDriver" Version="113.0.5672.6300" />
+  </ItemGroup>
+
 </Project>
