@@ -15,7 +15,7 @@ namespace TikiCrawler
     class Product
     {
         public string Title { get; set; }
-        public string Brand { get; set; }
+        public List<string> Categories { get; set; }
         public string RegularPrice { get; set; }
         public string SalePrice { get; set; }
         public string Description { get; set; }
@@ -24,213 +24,176 @@ namespace TikiCrawler
     }
     class Program
     {
-        static void Main(string[] args)
+        static Product GetProductData(IWebDriver browser, string productURL)
         {
-            //Define total number of product needed to get
-            int totalProductCount = 100;
-
-            //Create an instance of Chrome driver
-            IWebDriver browser = new ChromeDriver();
-
-            //Navigate to website Tiki.vn > Laptop category
-            browser.Navigate().GoToUrl("https://tiki.vn/laptop/c8095");
-            //page index
-            int currentPage = 1;
-
-
-
-            //store product crawled
-            var productsData = new List<Product>();
-
-            while (productsData.Count < totalProductCount)
+            try
             {
-                Console.WriteLine("Current page: " + currentPage);
-
-                // Wait for the page to load
-                System.Threading.Thread.Sleep(3000);
-
-                //Select all product items by CSS Selector
-                var products = browser.FindElements(By.CssSelector(".product-item"));
-                Console.WriteLine("Number of products in page:" + products.Count);
-
-                //if there's no product left
-                if (products.Count == 0)
-                {
-                    break;
-                }
-                //list store all product links
-                List<string> listProductLink = new List<string>();
-                int prodIndex = 0;
-                foreach (var product in products)
-                {
-                    try
-                    {
-                        string productLink = product.GetAttribute("href");
-                        listProductLink.Add(productLink);
-                    }
-                    catch
-                    {
-                        Console.WriteLine($"Product number {prodIndex + 1} at page {currentPage} have href not found");
-                    }
-                    prodIndex++;
-                }
-
-                //Go to each product link
-                foreach (var productLink in listProductLink)
-                {
-                    if (productsData.Count >= totalProductCount)
-                        break;
-                    //var productLink = listProductLink[i];
-                    Console.WriteLine("Going to: " + productLink.ToString());
-
-                    //Go to product link
-                    try
-                    {
-                        browser.Navigate().GoToUrl(productLink);
-                    }
-                    catch
-                    {
-                        try
-                        {
-                            browser.Navigate().GoToUrl("tiki.vn" + productLink);
-                        }
-                        catch
-                        {
-                            Console.WriteLine("Link error");
-                            continue;
-                        }
-
-                    }
-
-                    //Declare product information variables
-                    string productTitle;
-                    string productBrand;
-                    List<string> productImgs = new List<string>();
-                    string productDetails;
-                    string productPrice;
-                    string productSalePrice = null;
-                    string productDescription;
-
-                    // Wait for the page to load
-                    //browser.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(5);
-                    System.Threading.Thread.Sleep(1000);
-
-                    //Extract product information by CSS Selector
-                    try
-                    {
-
-                        productTitle = browser.FindElement(By.CssSelector("h1.title")).Text;
-                        Console.WriteLine("Product title: " + productTitle);
-                    }
-                    catch
-                    {
-                        Console.WriteLine("Title not found");
-                        continue;
-                    }
-
-                    try
-                    {
-                        //Extract product brand by CSS Selector then remove redundant data by Regular Expression
-                        productBrand = browser.FindElement(By.XPath("//a[@data-view-id='pdp_details_view_brand']")).Text;
-                        Console.WriteLine("Product brand: " + productBrand);
-                    }
-                    catch
-                    {
-                        Console.WriteLine("Brand not found");
-                        continue;
-                    }
-
-                    var groupImgs = browser.FindElements(By.CssSelector(".review-images img"));
-                    //Extract product images
-                    foreach (var img in groupImgs)
-                    {
-                        try
-                        {
-                            string imgSrc = img.GetAttribute("src");
-                            //Get bigger img from img cdn
-                            string preferredSize = "900x900";
-                            string pattern = @"^(https:\/\/salt\.tikicdn\.com\/cache\/)(\d+x\d+)(\/.*$)";
-                            Regex regex = new Regex(pattern);
-                            string newImageUrl = regex.Replace(imgSrc, $"{regex.Match(imgSrc).Groups[1].Value}{preferredSize}{regex.Match(imgSrc).Groups[3].Value}");
-                            productImgs.Add(newImageUrl);
-                            Console.WriteLine("Image source: " + newImageUrl);
-                        }
-                        catch
-                        {
-                            Console.WriteLine("Image not found");
-                        }
-                    }
-                    if (productImgs.Count == 0)
-                        continue;
-
-
-
-
-                    //Extract product price
-                    try
-                    {
-                        string currentPrice = browser.FindElement(By.CssSelector(".product-price__current-price")).Text;
-                        currentPrice = Regex.Match(currentPrice, "^[\\d|\\.|\\,]+").Value;
-
-                        try //have both listPrice and currentPrice
-                        {
-                            string listPrice = browser.FindElement(By.CssSelector(".product-price__list-price")).Text;
-                            listPrice = Regex.Match(listPrice, "^[\\d|\\.|\\,]+").Value;
-                            //currentPrice is sale price
-                            productSalePrice = currentPrice.Replace(".", string.Empty);
-                            Console.WriteLine("Product sale price: " + productSalePrice);
-                            //listPrice is regular price
-                            productPrice = listPrice.Replace(".", string.Empty);
-                            Console.WriteLine("Product price: " + productPrice);
-                        }
-                        catch //have only current price
-                        {
-                            productPrice = currentPrice.Replace(".", string.Empty);
-                            Console.WriteLine("Product price: " + productPrice);
-                            Console.WriteLine("Product do not sale");
-                        }
-                    }
-                    catch
-                    {
-                        Console.WriteLine("Price not found");
-                        continue;
-                    }
-
-
-                    //Extract product details
-                    try
-                    {
-                        productDetails = browser.FindElement(By.CssSelector(".content.has-table table")).GetAttribute("outerHTML");
-
-                    }
-                    catch
-                    {
-                        Console.WriteLine("Details not found");
-                        continue;
-                    }
-
-                    //Extract product description
-                    try
-                    {
-                        productDescription = browser.FindElement(By.CssSelector(".ToggleContent__View-sc-1dbmfaw-0.wyACs")).GetAttribute("innerHTML");
-                    }
-                    catch
-                    {
-                        Console.WriteLine("Description not found");
-                        continue;
-                    }
-
-                    //Create product object from product informations collected
-                    var product = new Product { Title = productTitle, Brand = productBrand, ImgUrl = productImgs, Description = productDescription, DetailInformation = productDetails, RegularPrice = productPrice, SalePrice = productSalePrice };
-                    //Add to list
-                    productsData.Add(product);
-                }
-
-
-                //Navigate to next page
-                browser.Navigate().GoToUrl("https://tiki.vn/laptop/c8095?page=" + (++currentPage));
-
+                browser.Navigate().GoToUrl(productURL);
             }
+            catch
+            {
+                Console.WriteLine("url not found");
+            }
+            //Declare product information variables
+            string productTitle;
+            List<string> productCategories = new List<string>();
+            List<string> productImgs = new List<string>();
+            string productDetails;
+            string productPrice;
+            string productSalePrice = null;
+            string productDescription;
+
+            // Wait for the page to load
+            //browser.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(5);
+            System.Threading.Thread.Sleep(1000);
+
+            //Extract product information by CSS Selector
+            try
+            {
+
+                productTitle = browser.FindElement(By.CssSelector("h1.product-title")).Text;
+                Console.WriteLine("Product title: " + productTitle);
+            }
+            catch
+            {
+                Console.WriteLine("Title not found");
+                return null;
+            }
+
+            var breadcrumb = browser.FindElement(By.CssSelector(".breadcrumbs"));
+            try
+            {
+                string productBrand = breadcrumb.FindElement(By.CssSelector("a:last-child")).Text;
+                productCategories.Add(productBrand);
+                Console.WriteLine("Product brand: " + productBrand);
+            }
+            catch
+            {
+                Console.WriteLine("Brand not found");
+                return null;
+            }
+            try
+            {
+                string productCategory = breadcrumb.FindElement(By.CssSelector("a:nth-last-of-type(2)")).Text;
+                if (productCategory == "Nước hoa nam")
+                {
+                    productCategory = "Dành cho nam";
+                }
+                else
+                {
+                    productCategory = "Dành cho nữ";
+                }
+                productCategories.Add(productCategory);
+                Console.WriteLine("Product category: " + productCategory);
+            }
+            catch
+            {
+                Console.WriteLine("Category not found");
+                return null;
+            }
+            var groupImgs = browser.FindElements(By.CssSelector("img.skip-lazy"));
+            //Extract product images
+            foreach (var img in groupImgs)
+            {
+                try
+                {
+                    string imgSrc = img.GetAttribute("src");
+                    //Get bigger img from img cdn
+                    string pattern = @"^(.*)-\d+x\d+(\.\w+)$";
+                    Regex regex = new Regex(pattern);
+                    string newImageUrl = regex.Replace(imgSrc, $"{regex.Match(imgSrc).Groups[1].Value}{regex.Match(imgSrc).Groups[3].Value}");
+                    productImgs.Add(newImageUrl);
+                    Console.WriteLine("Image source: " + newImageUrl);
+                }
+                catch
+                {
+                    Console.WriteLine("Image not found");
+                }
+            }
+            if (productImgs.Count == 0)
+                return null;
+
+
+
+
+            ////Extract product price
+            //try
+            //{
+            //    string currentPrice = browser.FindElement(By.CssSelector(".product-price__current-price")).Text;
+            //    currentPrice = Regex.Match(currentPrice, "^[\\d|\\.|\\,]+").Value;
+
+            //    try //have both listPrice and currentPrice
+            //    {
+            //        string listPrice = browser.FindElement(By.CssSelector(".product-price__list-price")).Text;
+            //        listPrice = Regex.Match(listPrice, "^[\\d|\\.|\\,]+").Value;
+            //        //currentPrice is sale price
+            //        productSalePrice = currentPrice.Replace(".", string.Empty);
+            //        Console.WriteLine("Product sale price: " + productSalePrice);
+            //        //listPrice is regular price
+            //        productPrice = listPrice.Replace(".", string.Empty);
+            //        Console.WriteLine("Product price: " + productPrice);
+            //    }
+            //    catch //have only current price
+            //    {
+            //        productPrice = currentPrice.Replace(".", string.Empty);
+            //        Console.WriteLine("Product price: " + productPrice);
+            //        Console.WriteLine("Product do not sale");
+            //    }
+            //}
+            //catch
+            //{
+            //    Console.WriteLine("Price not found");
+            //    return null;
+            //}
+
+
+            //Extract product details
+            try
+            {
+                productDetails = browser.FindElement(By.CssSelector(".product-short-description")).GetAttribute("innerHTML");
+                Console.WriteLine(productDetails);
+            }
+            catch
+            {
+                Console.WriteLine("Details not found");
+                return null;
+            }
+
+            //Extract product description
+            try
+            {
+                //string stars = browser.FindElement(By.CssSelector("#tab-description>div:last-child")).GetAttribute("outerHTML");
+                //string writer = browser.FindElement(By.CssSelector("#tab-description>p:last-of-type")).GetAttribute("outerHTML");
+                //productDescription = browser.FindElement(By.CssSelector("#tab-description")).GetAttribute("innerHTML");
+                //productDescription = productDescription.Remove(productDescription.Length - stars.Length);
+                //productDescription = productDescription.Remove(productDescription.Length - writer.Length - 10);
+                //Console.WriteLine(productDescription);
+
+                var productDescriptions = browser.FindElements(By.CssSelector("#tab-description>*:not(#tab-description>div:last-child, #tab-description>p:last-of-type)"));
+                productDescription = "";
+                foreach (var ele in productDescriptions)
+                {
+                    productDescription += ele.GetAttribute("outerHTML");
+                }
+                Console.WriteLine(productDescription);
+            }
+            catch
+            {
+                Console.WriteLine("Description not found");
+                return null;
+            }
+
+            //Extract price
+            //var select = browser.FindElement(By.CssSelector("select[name='attribute_pa_dung-tich']"));
+            //var options = select.FindElements(By.TagName("option"));
+            //options[options.Count - 1].Click();
+            //Create product object from product informations collected
+            //var product = new Product { Title = productTitle, Categories = productCategories, ImgUrl = productImgs, Description = productDescription, DetailInformation = productDetails, RegularPrice = productPrice, SalePrice = productSalePrice };
+            Product product = new Product();
+            return product;
+        }
+        static void Export(List<Product> productsData)
+        {
             //Config delimiter
             var config = new CsvConfiguration(CultureInfo.InvariantCulture)
             {
@@ -253,7 +216,7 @@ namespace TikiCrawler
                 foreach (var product in productsData)
                 {
                     csv.WriteField(product.Title);
-                    csv.WriteField(product.Brand);
+                    csv.WriteField(string.Join(",", product.Categories));
                     csv.WriteField(product.RegularPrice);
                     csv.WriteField(product.SalePrice);
                     csv.WriteField(string.Join(",", product.ImgUrl));
@@ -263,6 +226,25 @@ namespace TikiCrawler
                 }
 
             }
+        }
+        static void Main(string[] args)
+        {
+            //Define total number of product needed to get
+            int totalProductCount = 100;
+
+            //Create an instance of Chrome driver
+            IWebDriver browser = new ChromeDriver();
+
+            
+
+
+
+            //store product crawled
+            var productsData = new List<Product>();
+            productsData.Add(GetProductData(browser, "https://theperfume.vn/nuoc-hoa/nuoc-hoa-givenchy-play-intense/"));
+
+            //Export(productsData);
+            
         }
     }
 }
