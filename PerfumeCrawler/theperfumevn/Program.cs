@@ -279,11 +279,16 @@ namespace TikiCrawler
             decimal size20mlPrice = CalPrice(20, fullsizeValue, fullsizePrice);
             decimal size30mlPrice = CalPrice(30, fullsizeValue, fullsizePrice);
 
-            decimal saleRate = 0.1m;
-            decimal size10mlSalePrice = size10mlPrice * (1 - saleRate);
-            decimal size20mlSalePrice = size20mlPrice * (1 - saleRate);
-            decimal size30mlSalePrice = size30mlPrice * (1 - saleRate);
-            productSalePrice = (fullsizePrice * (1 - saleRate)).ToString();
+            if (productDetails.Contains("mát"))
+            {
+                decimal saleRate = 0.1m;
+                decimal size10mlSalePrice = size10mlPrice * (1 - saleRate);
+                decimal size20mlSalePrice = size20mlPrice * (1 - saleRate);
+                decimal size30mlSalePrice = size30mlPrice * (1 - saleRate);
+                productSalePrice = (fullsizePrice * (1 - saleRate)).ToString();
+                Console.WriteLine("product is on sale");
+                productCategories.Add("Đang khuyến mãi");
+            }
             //Create product object from product informations collected
             var product = new Product { Title = productTitle, Categories = productCategories, ImgUrl = productImgs, Description = productDescription, DetailInformation = productDetails, RegularPrice = fullsizePrice.ToString(), SalePrice = productSalePrice };
             //Product product = new Product();
