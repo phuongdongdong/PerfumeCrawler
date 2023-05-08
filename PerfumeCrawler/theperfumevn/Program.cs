@@ -20,6 +20,8 @@ namespace TikiCrawler
         public string SalePrice { get; set; }
         public string Description { get; set; }
         public string DetailInformation { get; set; }
+        public int InStock { get; set; }
+        public int Stock { get; set; }
         public List<string> ImgUrl { get; set; }
     }
     class Program
@@ -54,6 +56,7 @@ namespace TikiCrawler
             string productPrice;
             string productSalePrice = null;
             string productDescription;
+            int productStock;
 
             // Wait for the page to load
             //browser.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(5);
@@ -212,6 +215,13 @@ namespace TikiCrawler
                 return null;
             }
 
+            //set stock quantity
+            bool isInStock = true;
+            var rand = new Random();
+            //stock = random from 1 to 50
+            productStock = rand.Next(51) + 1;
+            Console.WriteLine("In stock: " + productStock);
+
             //Extract price
             string price;
             try
@@ -278,8 +288,8 @@ namespace TikiCrawler
             decimal size10mlPrice = CalPrice(10, fullsizeValue, fullsizePrice);
             decimal size20mlPrice = CalPrice(20, fullsizeValue, fullsizePrice);
             decimal size30mlPrice = CalPrice(30, fullsizeValue, fullsizePrice);
-
-            if (productDetails.Contains("mát"))
+            
+            if (productDetails.Contains("mát") || productStock >30)
             {
                 decimal saleRate = 0.1m;
                 decimal size10mlSalePrice = size10mlPrice * (1 - saleRate);
@@ -290,7 +300,7 @@ namespace TikiCrawler
                 productCategories.Add("Đang khuyến mãi");
             }
             //Create product object from product informations collected
-            var product = new Product { Title = productTitle, Categories = productCategories, ImgUrl = productImgs, Description = productDescription, DetailInformation = productDetails, RegularPrice = fullsizePrice.ToString(), SalePrice = productSalePrice };
+            var product = new Product { Title = productTitle, Categories = productCategories, ImgUrl = productImgs, Description = productDescription, DetailInformation = productDetails, RegularPrice = fullsizePrice.ToString(), SalePrice = productSalePrice, InStock = 1, Stock = productStock };
             //Product product = new Product();
             return product;
         }
@@ -312,6 +322,8 @@ namespace TikiCrawler
                 csv.WriteField("Images");
                 csv.WriteField("Description");
                 csv.WriteField("Short Description");
+                csv.WriteField("In stock?");
+                csv.WriteField("Stock");
                 csv.NextRecord();
 
                 // Write the data rows
@@ -324,6 +336,8 @@ namespace TikiCrawler
                     csv.WriteField(string.Join(",", product.ImgUrl));
                     csv.WriteField(product.Description);
                     csv.WriteField(product.DetailInformation);
+                    csv.WriteField(product.InStock);
+                    csv.WriteField(product.Stock);
                     csv.NextRecord();
                 }
 
@@ -332,7 +346,7 @@ namespace TikiCrawler
         static void Main(string[] args)
         {
             //Define total number of product needed to get
-            int totalProductCount = 30;
+            int totalProductCount = 10;
 
             //Create an instance of Chrome driver
             IWebDriver browser = new ChromeDriver();
