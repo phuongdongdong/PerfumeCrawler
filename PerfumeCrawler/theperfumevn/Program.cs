@@ -15,11 +15,15 @@ namespace TikiCrawler
     class Product
     {
         public string Title { get; set; }
+        public string SKU { get; set; }
         public List<string> Categories { get; set; }
         public string RegularPrice { get; set; }
         public string SalePrice { get; set; }
         public string Description { get; set; }
         public string DetailInformation { get; set; }
+        public int InStock { get; set; }
+        public int Stock { get; set; }
+        public List<string> Tags { get; set; }
         public List<string> ImgUrl { get; set; }
     }
     class Program
@@ -48,12 +52,15 @@ namespace TikiCrawler
             }
             //Declare product information variables
             string productTitle;
+            string productSKU = "";
             List<string> productCategories = new List<string>();
             List<string> productImgs = new List<string>();
             string productDetails;
             string productPrice;
             string productSalePrice = null;
             string productDescription;
+            int productStock;
+            List<string> productTags = new List<string>();
 
             // Wait for the page to load
             //browser.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(5);
@@ -76,21 +83,13 @@ namespace TikiCrawler
                 return null;
             }
 
+            //breadcrumb store brand and category information
             var breadcrumb = browser.FindElement(By.CssSelector(".breadcrumbs"));
+            //get product category
+            string productCategory = "";
             try
             {
-                string productBrand = breadcrumb.FindElement(By.CssSelector("a:last-child")).Text;
-                productCategories.Add(productBrand);
-                Console.WriteLine("Product brand: " + productBrand + "\n");
-            }
-            catch
-            {
-                Console.WriteLine("Brand not found");
-                return null;
-            }
-            try
-            {
-                string productCategory = breadcrumb.FindElement(By.CssSelector("a:nth-last-of-type(2)")).Text;
+                productCategory = breadcrumb.FindElement(By.CssSelector("a:nth-of-type(3)")).Text;
                 if (productCategory == "Nước hoa nam")
                 {
                     productCategory = "Dành cho nam";
@@ -100,15 +99,57 @@ namespace TikiCrawler
                     productCategory = "Dành cho nữ";
                 }
                 productCategories.Add(productCategory);
-                Console.WriteLine("Product category: " + productCategory + "\n");
+                Console.WriteLine("Product category: " + productCategory);
             }
             catch
             {
                 Console.WriteLine("Category not found");
-                return null;
+                productCategory = "Uncategorized";
             }
-            var groupImgs = browser.FindElements(By.CssSelector("img.skip-lazy"));
+
+            //get product brand
+            string productBrand = "";
+            try
+            {
+                productBrand = breadcrumb.FindElement(By.CssSelector("a:nth-of-type(4)")).Text;
+                TextInfo textInfo = CultureInfo.CurrentCulture.TextInfo;
+                productBrand = textInfo.ToTitleCase(productBrand.ToLower());
+                if (productCategory != "")
+                {
+                    //save as format of subcategory: for men/women > brand
+                    productCategories.Add(productCategory + " > " + productBrand);
+                }
+                Console.WriteLine("Product brand: " + productBrand);
+            }
+            catch
+            {
+                Console.WriteLine("Brand not found");
+            }
+
+            //create product sku
+            string titlePart = productTitle.Replace("Nước hoa ", "").Replace(" ", "");
+            if (productCategory != "Uncategorized")
+            {
+                if (productCategory == "Dành cho nam")
+                {
+                    productSKU = "MF";
+                }
+                else
+                {
+                    productSKU = "WF";
+                }
+            }
+            else
+                productSKU = "UF";
+            productSKU += "-" + titlePart;
+            if (productBrand != "")
+            {
+                productSKU +=  "-" + productBrand;
+            }
+
+
             //Extract product images
+            var groupImgs = browser.FindElements(By.CssSelector("img.skip-lazy"));
             foreach (var img in groupImgs)
             {
                 try
@@ -117,7 +158,7 @@ namespace TikiCrawler
                     //Get bigger img from img cdn
                     string pattern = @"^(.*)-\d+x\d+(\.\w+)$";
                     Regex regex = new Regex(pattern);
-                    string newImageUrl = regex.Replace(imgSrc, $"{regex.Match(imgSrc).Groups[1].Value}{regex.Match(imgSrc).Groups[3].Value}");
+                    string newImageUrl = regex.Replace(imgSrc, $"{regex.Match(imgSrc).Groups[1].Value}{regex.Match(imgSrc).Groups[2].Value}");
                     productImgs.Add(newImageUrl);
                     Console.WriteLine("Image source: " + newImageUrl);
                 }
@@ -169,7 +210,7 @@ namespace TikiCrawler
             try
             {
                 productDetails = browser.FindElement(By.CssSelector(".product-short-description")).GetAttribute("innerHTML");
-                Console.WriteLine(productDetails + "\n");
+                //Console.WriteLine(productDetails);
             }
             catch
             {
@@ -193,7 +234,7 @@ namespace TikiCrawler
                 {
                     productDescription += ele.GetAttribute("outerHTML");
                 }
-                Console.WriteLine(productDescription + "\n");
+                //Console.WriteLine(productDescription);
             }
             catch
             {
@@ -201,24 +242,39 @@ namespace TikiCrawler
                 return null;
             }
 
+            //set stock quantity
+            bool isInStock = true;
+            var rand = new Random();
+            //stock = random from 1 to 50
+            productStock = rand.Next(51) + 1;
+            Console.WriteLine("In stock: " + productStock);
+
             //Extract price
             string price;
             try
             {
-                price = browser.FindElement(By.CssSelector(".product-page-price del bdi")).Text;
-                price = price.Remove(price.Length - 2);
-                price = price.Replace(".", "");
-                Console.WriteLine(price);
+                try     //product is on sale, get the price being deleted
+                {
+                    price = browser.FindElement(By.CssSelector(".product-page-price del bdi")).Text;
+                    price = price.Remove(price.Length - 2);
+                    price = price.Replace(".", "");
+                    Console.WriteLine(price);
+                }
+                catch   //product have price rance, get the last price for fullsize
+                {
+                    price = browser.FindElement(By.CssSelector(".product-page-price span:last-child bdi")).Text;
+                    //remove " đ"
+                    price = price.Remove(price.Length - 2);
+                    //remove number format with .
+                    price = price.Replace(".", "");
+                    Console.WriteLine(price);
+                }
             }
-            catch
+            catch   // product is out of stock and don't have price
             {
-                price = browser.FindElement(By.CssSelector(".product-page-price span:last-child bdi")).Text;
-                //remove " đ"
-                price = price.Remove(price.Length - 2);
-                //remove number format with .
-                price = price.Replace(".", "");
-                Console.WriteLine(price);
+                return null;
             }
+            
 
             string fullsize;
             try
@@ -259,15 +315,28 @@ namespace TikiCrawler
             decimal size10mlPrice = CalPrice(10, fullsizeValue, fullsizePrice);
             decimal size20mlPrice = CalPrice(20, fullsizeValue, fullsizePrice);
             decimal size30mlPrice = CalPrice(30, fullsizeValue, fullsizePrice);
+            
+            if (productDetails.Contains("mát") || productStock >30)
+            {
+                decimal saleRate = 0.1m;
+                decimal size10mlSalePrice = size10mlPrice * (1 - saleRate);
+                decimal size20mlSalePrice = size20mlPrice * (1 - saleRate);
+                decimal size30mlSalePrice = size30mlPrice * (1 - saleRate);
+                productSalePrice = (fullsizePrice * (1 - saleRate)).ToString();
+                Console.WriteLine("product is on sale");
+                productCategories.Add("Đang khuyến mãi");
+            }
 
-            decimal saleRate = 0.1m;
-            decimal size10mlSalePrice = size10mlPrice * (1 - saleRate);
-            decimal size20mlSalePrice = size20mlPrice * (1 - saleRate);
-            decimal size30mlSalePrice = size30mlPrice * (1 - saleRate);
+            //extract tags
+            var tagLinks = browser.FindElements(By.CssSelector(".tagged_as a"));
+            foreach( var tagLink in tagLinks)
+            {
+                productTags.Add(tagLink.Text);
+                Console.WriteLine("tag: " + tagLink.Text);
+            }
             //Create product object from product informations collected
-            //var product = new Product { Title = productTitle, Categories = productCategories, ImgUrl = productImgs, Description = productDescription, DetailInformation = productDetails, RegularPrice = productPrice, SalePrice = productSalePrice };
-            Product product = new Product();
-
+            var product = new Product { Title = productTitle, SKU = productSKU, Categories = productCategories, ImgUrl = productImgs, Description = productDescription, DetailInformation = productDetails, RegularPrice = fullsizePrice.ToString(), SalePrice = productSalePrice, InStock = 1, Stock = productStock, Tags = productTags };
+            //Product product = new Product();
             return product;
         }
         static void Export(List<Product> productsData)
@@ -282,24 +351,32 @@ namespace TikiCrawler
             {
                 //Write data header
                 csv.WriteField("Name");
+                csv.WriteField("SKU");
                 csv.WriteField("Categories");
                 csv.WriteField("Regular Price");
                 csv.WriteField("Sale Price");
                 csv.WriteField("Images");
                 csv.WriteField("Description");
                 csv.WriteField("Short Description");
+                csv.WriteField("In stock?");
+                csv.WriteField("Stock");
+                csv.WriteField("Tags");
                 csv.NextRecord();
 
                 // Write the data rows
                 foreach (var product in productsData)
                 {
                     csv.WriteField(product.Title);
+                    csv.WriteField(product.SKU);
                     csv.WriteField(string.Join(",", product.Categories));
                     csv.WriteField(product.RegularPrice);
                     csv.WriteField(product.SalePrice);
                     csv.WriteField(string.Join(",", product.ImgUrl));
                     csv.WriteField(product.Description);
                     csv.WriteField(product.DetailInformation);
+                    csv.WriteField(product.InStock);
+                    csv.WriteField(product.Stock);
+                    csv.WriteField(string.Join(",", product.Tags));
                     csv.NextRecord();
                 }
 
@@ -308,21 +385,69 @@ namespace TikiCrawler
         static void Main(string[] args)
         {
             //Define total number of product needed to get
-            int totalProductCount = 100;
+            int totalProductCount = 10;
 
             //Create an instance of Chrome driver
             IWebDriver browser = new ChromeDriver();
 
-            
-
-
-
             //store product crawled
             var productsData = new List<Product>();
-            //https://theperfume.vn/nuoc-hoa/nuoc-hoa-givenchy-play-intense/
-            productsData.Add(GetProductData(browser, "https://theperfume.vn/nuoc-hoa/nuoc-hoa-jeanne-lanvin-couture-eau-de-parfum-100ml/"));
 
-            //Export(productsData);
+            browser.Navigate().GoToUrl("https://theperfume.vn/thuong-hieu-nuoc-hoa/");
+            var brands = browser.FindElements(By.CssSelector(".wb-thumb-title a"));
+            List<string> brandURLs = new List<string>();
+            foreach (var brand in brands)
+            {
+                string brandURL = brand.GetAttribute("href");
+                brandURLs.Add(brandURL);
+            }
+            //go to each brand
+            foreach(var brandURL in brandURLs)
+            {
+                if (productsData.Count >= totalProductCount)
+                    break;
+                browser.Navigate().GoToUrl(brandURL);
+                //first page of that brand
+                int pageIndex = 1;
+                //use while as we don't know how many pages
+                while (productsData.Count < totalProductCount)
+                {
+                    //select all to product in page
+                    var productURLElements = browser.FindElements(By.CssSelector(".products .product-title a"));
+                    List<string> productURLs = new List<string>();
+                    //no product left on this brand, move to next brand
+                    if (productURLElements.Count == 0)
+                        break;
+                    //extract products url
+                    foreach (var productURLElement in productURLElements)
+                    {
+                        string productURL = productURLElement.GetAttribute("href");
+                        productURLs.Add(productURL);
+                    }
+                    //go to each product
+                    foreach (string productURL in productURLs)
+                    {
+                        if (productsData.Count >= totalProductCount)
+                            break;
+                        Product productData = GetProductData(browser, productURL);
+                        if (productData != null)
+                            productsData.Add(productData);
+                    }
+                    //not get enough products, go to next page
+                    if (productsData.Count < totalProductCount)
+                    {
+                        browser.Navigate().GoToUrl(brandURL + $"page/{++pageIndex}/");
+                    }
+                }
+                
+
+            }
+
+
+
+            //https://theperfume.vn/nuoc-hoa/nuoc-hoa-givenchy-play-intense/
+
+            Export(productsData);
 
         }
     }
