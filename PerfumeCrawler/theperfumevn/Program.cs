@@ -50,9 +50,8 @@ namespace TikiCrawler
             //Extract product information by CSS Selector
             try
             {
-
                 productTitle = browser.FindElement(By.CssSelector("h1.product-title")).Text;
-                Console.WriteLine("Product title: " + productTitle);
+                Console.WriteLine("Product title: " + productTitle + "\n");
             }
             catch
             {
@@ -65,7 +64,7 @@ namespace TikiCrawler
             {
                 string productBrand = breadcrumb.FindElement(By.CssSelector("a:last-child")).Text;
                 productCategories.Add(productBrand);
-                Console.WriteLine("Product brand: " + productBrand);
+                Console.WriteLine("Product brand: " + productBrand + "\n");
             }
             catch
             {
@@ -84,7 +83,7 @@ namespace TikiCrawler
                     productCategory = "Dành cho nữ";
                 }
                 productCategories.Add(productCategory);
-                Console.WriteLine("Product category: " + productCategory);
+                Console.WriteLine("Product category: " + productCategory + "\n");
             }
             catch
             {
@@ -110,6 +109,8 @@ namespace TikiCrawler
                     Console.WriteLine("Image not found");
                 }
             }
+
+            Console.WriteLine("\n");
             if (productImgs.Count == 0)
                 return null;
 
@@ -151,7 +152,7 @@ namespace TikiCrawler
             try
             {
                 productDetails = browser.FindElement(By.CssSelector(".product-short-description")).GetAttribute("innerHTML");
-                Console.WriteLine(productDetails);
+                Console.WriteLine(productDetails + "\n");
             }
             catch
             {
@@ -175,7 +176,7 @@ namespace TikiCrawler
                 {
                     productDescription += ele.GetAttribute("outerHTML");
                 }
-                Console.WriteLine(productDescription);
+                Console.WriteLine(productDescription + "\n");
             }
             catch
             {
@@ -190,6 +191,7 @@ namespace TikiCrawler
             //Create product object from product informations collected
             //var product = new Product { Title = productTitle, Categories = productCategories, ImgUrl = productImgs, Description = productDescription, DetailInformation = productDetails, RegularPrice = productPrice, SalePrice = productSalePrice };
             Product product = new Product();
+
             return product;
         }
         static void Export(List<Product> productsData)
