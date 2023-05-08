@@ -15,6 +15,7 @@ namespace TikiCrawler
     class Product
     {
         public string Title { get; set; }
+        public string SKU { get; set; }
         public List<string> Categories { get; set; }
         public string RegularPrice { get; set; }
         public string SalePrice { get; set; }
@@ -51,6 +52,7 @@ namespace TikiCrawler
             }
             //Declare product information variables
             string productTitle;
+            string productSKU = "";
             List<string> productCategories = new List<string>();
             List<string> productImgs = new List<string>();
             string productDetails;
@@ -103,13 +105,14 @@ namespace TikiCrawler
             catch
             {
                 Console.WriteLine("Category not found");
-                return null;
+                productCategory = "Uncategorized";
             }
 
             //get product brand
+            string productBrand = "";
             try
             {
-                string productBrand = breadcrumb.FindElement(By.CssSelector("a:nth-of-type(4)")).Text;
+                productBrand = breadcrumb.FindElement(By.CssSelector("a:nth-of-type(4)")).Text;
                 TextInfo textInfo = CultureInfo.CurrentCulture.TextInfo;
                 productBrand = textInfo.ToTitleCase(productBrand.ToLower());
                 if (productCategory != "")
@@ -124,9 +127,30 @@ namespace TikiCrawler
                 Console.WriteLine("Brand not found");
             }
 
+            //create product sku
+            string titlePart = productTitle.Replace("Nước hoa ", "").Replace(" ", "");
+            if (productCategory != "Uncategorized")
+            {
+                if (productCategory == "Dành cho nam")
+                {
+                    productSKU = "MF";
+                }
+                else
+                {
+                    productSKU = "WF";
+                }
+            }
+            else
+                productSKU = "UF";
+            productSKU += "-" + titlePart;
+            if (productBrand != "")
+            {
+                productSKU +=  "-" + productBrand;
+            }
 
-            var groupImgs = browser.FindElements(By.CssSelector("img.skip-lazy"));
+
             //Extract product images
+            var groupImgs = browser.FindElements(By.CssSelector("img.skip-lazy"));
             foreach (var img in groupImgs)
             {
                 try
@@ -310,7 +334,7 @@ namespace TikiCrawler
                 Console.WriteLine("tag: " + tagLink.Text);
             }
             //Create product object from product informations collected
-            var product = new Product { Title = productTitle, Categories = productCategories, ImgUrl = productImgs, Description = productDescription, DetailInformation = productDetails, RegularPrice = fullsizePrice.ToString(), SalePrice = productSalePrice, InStock = 1, Stock = productStock, Tags = productTags };
+            var product = new Product { Title = productTitle, SKU = productSKU, Categories = productCategories, ImgUrl = productImgs, Description = productDescription, DetailInformation = productDetails, RegularPrice = fullsizePrice.ToString(), SalePrice = productSalePrice, InStock = 1, Stock = productStock, Tags = productTags };
             //Product product = new Product();
             return product;
         }
@@ -326,6 +350,7 @@ namespace TikiCrawler
             {
                 //Write data header
                 csv.WriteField("Name");
+                csv.WriteField("SKU");
                 csv.WriteField("Categories");
                 csv.WriteField("Regular Price");
                 csv.WriteField("Sale Price");
@@ -341,6 +366,7 @@ namespace TikiCrawler
                 foreach (var product in productsData)
                 {
                     csv.WriteField(product.Title);
+                    csv.WriteField(product.SKU);
                     csv.WriteField(string.Join(",", product.Categories));
                     csv.WriteField(product.RegularPrice);
                     csv.WriteField(product.SalePrice);
