@@ -24,6 +24,12 @@ namespace TikiCrawler
     }
     class Program
     {
+        static bool HasSizeInTitle(string title)
+        {
+            string pattern = @"\s\d+(ml|ML)";
+            Match match = Regex.Match(title, pattern);
+            return match.Success;
+        }
         static decimal CalPrice(int newSize, int fullSize, decimal fullsizePrice)
         {
             decimal ratio = 1.17m + (fullSize / newSize) * 0.002m;
@@ -58,6 +64,11 @@ namespace TikiCrawler
             {
 
                 productTitle = browser.FindElement(By.CssSelector("h1.product-title")).Text;
+                //check if product is a size variation of some parent product
+                if (HasSizeInTitle(productTitle))
+                {
+                    return null;
+                }
                 Console.WriteLine("Product title: " + productTitle);
             }
             catch
@@ -307,10 +318,10 @@ namespace TikiCrawler
             //store product crawled
             var productsData = new List<Product>();
             //https://theperfume.vn/nuoc-hoa/nuoc-hoa-givenchy-play-intense/
-            productsData.Add(GetProductData(browser, "https://theperfume.vn/nuoc-hoa/lancome-tresor-midnight-rose/"));
+            productsData.Add(GetProductData(browser, "https://theperfume.vn/nuoc-hoa/nuoc-hoa-jeanne-lanvin-couture-eau-de-parfum-100ml/"));
 
             //Export(productsData);
-            
+
         }
     }
 }
