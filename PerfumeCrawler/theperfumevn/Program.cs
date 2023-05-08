@@ -22,6 +22,7 @@ namespace TikiCrawler
         public string DetailInformation { get; set; }
         public int InStock { get; set; }
         public int Stock { get; set; }
+        public List<string> Tags { get; set; }
         public List<string> ImgUrl { get; set; }
     }
     class Program
@@ -57,6 +58,7 @@ namespace TikiCrawler
             string productSalePrice = null;
             string productDescription;
             int productStock;
+            List<string> productTags = new List<string>();
 
             // Wait for the page to load
             //browser.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(5);
@@ -299,8 +301,16 @@ namespace TikiCrawler
                 Console.WriteLine("product is on sale");
                 productCategories.Add("Đang khuyến mãi");
             }
+
+            //extract tags
+            var tagLinks = browser.FindElements(By.CssSelector(".tagged_as a"));
+            foreach( var tagLink in tagLinks)
+            {
+                productTags.Add(tagLink.Text);
+                Console.WriteLine("tag: " + tagLink.Text);
+            }
             //Create product object from product informations collected
-            var product = new Product { Title = productTitle, Categories = productCategories, ImgUrl = productImgs, Description = productDescription, DetailInformation = productDetails, RegularPrice = fullsizePrice.ToString(), SalePrice = productSalePrice, InStock = 1, Stock = productStock };
+            var product = new Product { Title = productTitle, Categories = productCategories, ImgUrl = productImgs, Description = productDescription, DetailInformation = productDetails, RegularPrice = fullsizePrice.ToString(), SalePrice = productSalePrice, InStock = 1, Stock = productStock, Tags = productTags };
             //Product product = new Product();
             return product;
         }
@@ -324,6 +334,7 @@ namespace TikiCrawler
                 csv.WriteField("Short Description");
                 csv.WriteField("In stock?");
                 csv.WriteField("Stock");
+                csv.WriteField("Tags");
                 csv.NextRecord();
 
                 // Write the data rows
@@ -338,6 +349,7 @@ namespace TikiCrawler
                     csv.WriteField(product.DetailInformation);
                     csv.WriteField(product.InStock);
                     csv.WriteField(product.Stock);
+                    csv.WriteField(string.Join(",", product.Tags));
                     csv.NextRecord();
                 }
 
