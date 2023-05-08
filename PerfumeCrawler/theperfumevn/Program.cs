@@ -24,6 +24,18 @@ namespace TikiCrawler
     }
     class Program
     {
+        static bool HasSizeInTitle(string title)
+        {
+            string pattern = @"\s\d+(ml|ML)";
+            Match match = Regex.Match(title, pattern);
+            return match.Success;
+        }
+        static decimal CalPrice(int newSize, int fullSize, decimal fullsizePrice)
+        {
+            decimal ratio = 1.17m + (fullSize / newSize) * 0.002m;
+            decimal newPrice = fullsizePrice / fullSize * ratio * newSize;
+            return newPrice;
+        }
         static Product GetProductData(IWebDriver browser, string productURL)
         {
             try
@@ -51,7 +63,12 @@ namespace TikiCrawler
             try
             {
                 productTitle = browser.FindElement(By.CssSelector("h1.product-title")).Text;
-                Console.WriteLine("Product title: " + productTitle + "\n");
+                //check if product is a size variation of some parent product
+                if (HasSizeInTitle(productTitle))
+                {
+                    return null;
+                }
+                Console.WriteLine("Product title: " + productTitle);
             }
             catch
             {
@@ -185,9 +202,68 @@ namespace TikiCrawler
             }
 
             //Extract price
-            //var select = browser.FindElement(By.CssSelector("select[name='attribute_pa_dung-tich']"));
-            //var options = select.FindElements(By.TagName("option"));
-            //options[options.Count - 1].Click();
+            string price;
+            try
+            {
+                price = browser.FindElement(By.CssSelector(".product-page-price del bdi")).Text;
+                price = price.Remove(price.Length - 2);
+                price = price.Replace(".", "");
+                Console.WriteLine(price);
+            }
+            catch
+            {
+                price = browser.FindElement(By.CssSelector(".product-page-price span:last-child bdi")).Text;
+                //remove " đ"
+                price = price.Remove(price.Length - 2);
+                //remove number format with .
+                price = price.Replace(".", "");
+                Console.WriteLine(price);
+            }
+
+            string fullsize;
+            try
+            {
+                var select = browser.FindElement(By.CssSelector("#pa_dung-tich"));
+                var options = select.FindElements(By.TagName("option"));
+                fullsize = options[options.Count - 1].GetAttribute("value");
+                //remove "ml"
+                fullsize = fullsize.Remove(fullsize.Length - 2);
+                Console.WriteLine(fullsize);
+            }
+            catch
+            {
+                fullsize = "100";
+            }
+            // convert price to decimal
+            decimal fullsizePrice;
+            try
+            {
+                fullsizePrice = Convert.ToDecimal(price);
+            }
+            catch
+            {
+                Console.WriteLine(price);
+                return null;
+            }
+            //convert size to int
+            int fullsizeValue;
+            try
+            {
+                fullsizeValue = Convert.ToInt32(fullsize);
+            }
+            catch
+            {
+                Console.WriteLine(price);
+                return null;
+            }
+            decimal size10mlPrice = CalPrice(10, fullsizeValue, fullsizePrice);
+            decimal size20mlPrice = CalPrice(20, fullsizeValue, fullsizePrice);
+            decimal size30mlPrice = CalPrice(30, fullsizeValue, fullsizePrice);
+
+            decimal saleRate = 0.1m;
+            decimal size10mlSalePrice = size10mlPrice * (1 - saleRate);
+            decimal size20mlSalePrice = size20mlPrice * (1 - saleRate);
+            decimal size30mlSalePrice = size30mlPrice * (1 - saleRate);
             //Create product object from product informations collected
             //var product = new Product { Title = productTitle, Categories = productCategories, ImgUrl = productImgs, Description = productDescription, DetailInformation = productDetails, RegularPrice = productPrice, SalePrice = productSalePrice };
             Product product = new Product();
@@ -243,10 +319,11 @@ namespace TikiCrawler
 
             //store product crawled
             var productsData = new List<Product>();
-            productsData.Add(GetProductData(browser, "https://theperfume.vn/nuoc-hoa/nuoc-hoa-givenchy-play-intense/"));
+            //https://theperfume.vn/nuoc-hoa/nuoc-hoa-givenchy-play-intense/
+            productsData.Add(GetProductData(browser, "https://theperfume.vn/nuoc-hoa/nuoc-hoa-jeanne-lanvin-couture-eau-de-parfum-100ml/"));
 
             //Export(productsData);
-            
+
         }
     }
 }
