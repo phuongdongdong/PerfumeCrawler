@@ -327,7 +327,7 @@ namespace TikiCrawler
         static void Main(string[] args)
         {
             //Define total number of product needed to get
-            int totalProductCount = 15;
+            int totalProductCount = 30;
 
             //Create an instance of Chrome driver
             IWebDriver browser = new ChromeDriver();
@@ -343,27 +343,45 @@ namespace TikiCrawler
                 string brandURL = brand.GetAttribute("href");
                 brandURLs.Add(brandURL);
             }
+            //go to each brand
             foreach(var brandURL in brandURLs)
             {
                 if (productsData.Count >= totalProductCount)
                     break;
                 browser.Navigate().GoToUrl(brandURL);
-                var productURLElements = browser.FindElements(By.CssSelector(".products .product-title a"));
-                List<string> productURLs = new List<string>();
-                foreach(var productURLElement in productURLElements)
+                //first page of that brand
+                int pageIndex = 1;
+                //use while as we don't know how many pages
+                while (productsData.Count < totalProductCount)
                 {
-                    string productURL = productURLElement.GetAttribute("href");
-                    productURLs.Add(productURL);
-                }
-
-                foreach (string productURL in productURLs)
-                {
-                    if (productsData.Count >= totalProductCount)
+                    //select all to product in page
+                    var productURLElements = browser.FindElements(By.CssSelector(".products .product-title a"));
+                    List<string> productURLs = new List<string>();
+                    //no product left on this brand, move to next brand
+                    if (productURLElements.Count == 0)
                         break;
-                    Product productData = GetProductData(browser, productURL);
-                    if (productData != null)
-                        productsData.Add(productData);
+                    //extract products url
+                    foreach (var productURLElement in productURLElements)
+                    {
+                        string productURL = productURLElement.GetAttribute("href");
+                        productURLs.Add(productURL);
+                    }
+                    //go to each product
+                    foreach (string productURL in productURLs)
+                    {
+                        if (productsData.Count >= totalProductCount)
+                            break;
+                        Product productData = GetProductData(browser, productURL);
+                        if (productData != null)
+                            productsData.Add(productData);
+                    }
+                    //not get enough products, go to next page
+                    if (productsData.Count < totalProductCount)
+                    {
+                        browser.Navigate().GoToUrl(brandURL + $"page/{++pageIndex}/");
+                    }
                 }
+                
 
             }
 
