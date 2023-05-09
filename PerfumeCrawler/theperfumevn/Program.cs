@@ -25,7 +25,7 @@ namespace TikiCrawler
         public string DetailInformation { get; set; }
         public string TaxClass { get; set; }
         public int InStock { get; set; }
-        public int Stock { get; set; }
+        public int? Stock { get; set; }
         public List<string> Tags { get; set; }
         public List<string> ImgUrl { get; set; }
         public string AttributeName { get; set; }
@@ -39,6 +39,12 @@ namespace TikiCrawler
         {
             string pattern = @"\s\d+(ml|ML)";
             Match match = Regex.Match(title, pattern);
+            return match.Success;
+        }
+        static bool HasSizeInURL(string url)
+        {
+            string pattern = @"-\d+(ml|ML)";
+            Match match = Regex.Match(url, pattern);
             return match.Success;
         }
         static decimal CalPrice(int newSize, int fullSize, decimal fullsizePrice)
@@ -71,7 +77,7 @@ namespace TikiCrawler
             int productStock;
             List<string> productTags = new List<string>();
             string attributeName = "Size";
-            
+
 
 
             List<Product> listVariableProduct = new List<Product>();
@@ -85,10 +91,10 @@ namespace TikiCrawler
             {
                 productTitle = browser.FindElement(By.CssSelector("h1.product-title")).Text;
                 //check if product is a size variation of some parent product
-                if (HasSizeInTitle(productTitle))
-                {
-                    return null;
-                }
+                //if (HasSizeInTitle(productTitle))
+                //{
+                //    return null;
+                //}
                 Console.WriteLine("Product title: " + productTitle);
             }
             catch
@@ -143,21 +149,29 @@ namespace TikiCrawler
                 Console.WriteLine("Brand not found");
             }
 
+            //If product have no brand, no category
+            if (productCategories.Count == 0)
+            {
+                productCategories.Add("Uncategorized");
+            }
             //create product sku
             string titlePart = productTitle.Replace("Nước hoa ", "").Replace(" ", "");
             if (productCategory != "Uncategorized")
             {
                 if (productCategory == "Dành cho nam")
                 {
-                    productSKU = "MF";
+                    //Men Perfume
+                    productSKU = "MP";
                 }
                 else
                 {
-                    productSKU = "WF";
+                    //Women Perfume
+                    productSKU = "WP";
                 }
             }
             else
-                productSKU = "UF";
+                //Uncategorized Perfume
+                productSKU = "UP";
             productSKU += "-" + titlePart;
             if (productBrand != "")
             {
@@ -190,39 +204,6 @@ namespace TikiCrawler
                 return null;
 
 
-
-
-            ////Extract product price
-            //try
-            //{
-            //    string currentPrice = browser.FindElement(By.CssSelector(".product-price__current-price")).Text;
-            //    currentPrice = Regex.Match(currentPrice, "^[\\d|\\.|\\,]+").Value;
-
-            //    try //have both listPrice and currentPrice
-            //    {
-            //        string listPrice = browser.FindElement(By.CssSelector(".product-price__list-price")).Text;
-            //        listPrice = Regex.Match(listPrice, "^[\\d|\\.|\\,]+").Value;
-            //        //currentPrice is sale price
-            //        productSalePrice = currentPrice.Replace(".", string.Empty);
-            //        Console.WriteLine("Product sale price: " + productSalePrice);
-            //        //listPrice is regular price
-            //        productPrice = listPrice.Replace(".", string.Empty);
-            //        Console.WriteLine("Product price: " + productPrice);
-            //    }
-            //    catch //have only current price
-            //    {
-            //        productPrice = currentPrice.Replace(".", string.Empty);
-            //        Console.WriteLine("Product price: " + productPrice);
-            //        Console.WriteLine("Product do not sale");
-            //    }
-            //}
-            //catch
-            //{
-            //    Console.WriteLine("Price not found");
-            //    return null;
-            //}
-
-
             //Extract product details
             try
             {
@@ -238,13 +219,6 @@ namespace TikiCrawler
             //Extract product description
             try
             {
-                //string stars = browser.FindElement(By.CssSelector("#tab-description>div:last-child")).GetAttribute("outerHTML");
-                //string writer = browser.FindElement(By.CssSelector("#tab-description>p:last-of-type")).GetAttribute("outerHTML");
-                //productDescription = browser.FindElement(By.CssSelector("#tab-description")).GetAttribute("innerHTML");
-                //productDescription = productDescription.Remove(productDescription.Length - stars.Length);
-                //productDescription = productDescription.Remove(productDescription.Length - writer.Length - 10);
-                //Console.WriteLine(productDescription);
-
                 var productDescriptions = browser.FindElements(By.CssSelector("#tab-description>*:not(#tab-description>div:last-child, #tab-description>p:last-of-type)"));
                 productDescription = "";
                 foreach (var ele in productDescriptions)
@@ -260,11 +234,13 @@ namespace TikiCrawler
             }
 
             //set stock quantity
-            bool isInStock = true;
             var rand = new Random();
-            //stock = random from 1 to 50
-            productStock = rand.Next(51) + 1;
-            Console.WriteLine("In stock: " + productStock);
+            //stock = random from 1 to 20
+            int fullSizeStock = rand.Next(21) + 1;
+            int size10mlStock = rand.Next(21) + 1;
+            int size20mlStock = rand.Next(21) + 1;
+            int size30mlStock = rand.Next(21) + 1;
+            productStock = fullSizeStock + size10mlStock + size20mlStock + size30mlStock;
 
             //Extract price
             string price;
@@ -277,7 +253,7 @@ namespace TikiCrawler
                     price = price.Replace(".", "");
                     Console.WriteLine(price);
                 }
-                catch   //product have price rance, get the last price for fullsize
+                catch   //product have price range, get the last price for fullsize
                 {
                     price = browser.FindElement(By.CssSelector(".product-page-price span:last-child bdi")).Text;
                     //remove " đ"
@@ -336,7 +312,7 @@ namespace TikiCrawler
             
 
 
-            //extract tags
+            //Get tags
             var tagLinks = browser.FindElements(By.CssSelector(".tagged_as a"));
             foreach( var tagLink in tagLinks)
             {
@@ -347,35 +323,29 @@ namespace TikiCrawler
             string attributeValues = "10ml, 20ml, 30ml, " + fullsizeValue + "ml";
 
             //Create product object from product informations collected
-            var product = new Product { Title = productTitle, Type = productType, SKU = productSKU, Categories = productCategories, ImgUrl = productImgs, Description = productDescription, DetailInformation = productDetails, RegularPrice = fullsizePrice.ToString(), SalePrice = productSalePrice, InStock = 1, Stock = productStock, Tags = productTags, AttributeName = attributeName, AttributeValue = attributeValues, AttributeVisible = 1, AttributeGlobal = 0 };
+            var product = new Product { Title = productTitle, Type = productType, SKU = productSKU, Categories = productCategories, ImgUrl = productImgs, Description = productDescription, DetailInformation = productDetails, InStock = 1, Stock = null, RegularPrice = fullsizePrice.ToString(), SalePrice = productSalePrice, Tags = productTags, AttributeName = attributeName, AttributeValue = attributeValues, AttributeVisible = 1, AttributeGlobal = 0 };
             listVariableProduct.Add(product);
 
 
             //Declare variation product information variables
             string VProductTitle;
             string VProductType;
-            //string VProductSKU = "";
-            //List<string> VProductCategories = new List<string>();
             string VProductParent;
-            //List<string> VProductImgs = new List<string>();
-            //string VProductDetails;
             string VProductPrice;
             string VProductSalePrice;
-            //string VProductDescription;
             string VProductTaxClass;
-            //int VProductStock;
 
-            //Calculate sale price for variation
-            decimal? size10mlSalePrice = null;
-            decimal? size20mlSalePrice = null;
-            decimal? size30mlSalePrice = null;
+            //Calculate sale price for product contains "mát" and have high stock level
+            string? size10mlSalePrice = null;
+            string? size20mlSalePrice = null;
+            string? size30mlSalePrice = null;
 
             if (productDetails.Contains("mát") || productStock > 30)
             {
                 decimal saleRate = 0.1m;
-                size10mlSalePrice = size10mlPrice * (1 - saleRate);
-                size20mlSalePrice = size20mlPrice * (1 - saleRate);
-                size30mlSalePrice = size30mlPrice * (1 - saleRate);
+                size10mlSalePrice = (size10mlPrice * (1 - saleRate)).ToString();
+                size20mlSalePrice = (size20mlPrice * (1 - saleRate)).ToString();
+                size30mlSalePrice = (size30mlPrice * (1 - saleRate)).ToString();
                 productSalePrice = (fullsizePrice * (1 - saleRate)).ToString();
                 Console.WriteLine("product is on sale");
                 productCategories.Add("Đang khuyến mãi");
@@ -386,11 +356,11 @@ namespace TikiCrawler
             VProductType = "variation";
             VProductParent = productSKU;
             VProductPrice = fullsizePrice.ToString();
-            VProductSalePrice= productSalePrice.ToString();
+            VProductSalePrice= productSalePrice;
             VProductTaxClass = "parent";
 
-            //Create product object from 10ml variation product informations collected
-            var productFullSize = new Product { Title = VProductTitle, Type = VProductType, Categories = productCategories, ImgUrl = productImgs, RegularPrice = VProductPrice.ToString(), SalePrice = VProductSalePrice, Parent = productSKU, TaxClass = VProductTaxClass, InStock = 1, Stock = productStock, Tags = productTags, AttributeName = attributeName, AttributeValue = fullsizeValue + "ml", AttributeGlobal = 0 };
+            //Create product object from full size variation product informations collected
+            var productFullSize = new Product { Title = VProductTitle, Type = VProductType, Categories = productCategories, ImgUrl = productImgs, RegularPrice = VProductPrice.ToString(), SalePrice = VProductSalePrice, Parent = productSKU, TaxClass = VProductTaxClass, InStock = 1, Stock = fullSizeStock, Tags = productTags, AttributeName = attributeName, AttributeValue = fullsizeValue + "ml", AttributeGlobal = 0 };
             //Add to product list
             listVariableProduct.Add(productFullSize);
 
@@ -400,10 +370,10 @@ namespace TikiCrawler
             VProductType = "variation";
             VProductParent = productSKU;
             VProductPrice = size10mlPrice.ToString();
-            VProductSalePrice = size10mlSalePrice.ToString();
+            VProductSalePrice = size10mlSalePrice;
 
             //Create product object from 10ml variation product informations collected
-            var product10ml = new Product { Title = VProductTitle, Type = VProductType, Categories = productCategories, ImgUrl = productImgs, RegularPrice = VProductPrice.ToString(), SalePrice = VProductSalePrice, Parent = productSKU, TaxClass = VProductTaxClass, InStock = 1, Stock = productStock, Tags = productTags, AttributeName = attributeName, AttributeValue = "10ml", AttributeGlobal = 0 };
+            var product10ml = new Product { Title = VProductTitle, Type = VProductType, Categories = productCategories, ImgUrl = productImgs, RegularPrice = VProductPrice.ToString(), SalePrice = VProductSalePrice, Parent = productSKU, TaxClass = VProductTaxClass, InStock = 1, Stock = size10mlStock, Tags = productTags, AttributeName = attributeName, AttributeValue = "10ml", AttributeGlobal = 0 };
             //Add to product list
             listVariableProduct.Add(product10ml);
 
@@ -413,10 +383,10 @@ namespace TikiCrawler
             VProductType = "variation";
             VProductParent = productSKU;
             VProductPrice = size20mlPrice.ToString();
-            VProductSalePrice= size20mlSalePrice.ToString();
+            VProductSalePrice= size20mlSalePrice;
 
-            //Create product object from 10ml variation product informations collected
-            var product20ml = new Product { Title = VProductTitle, Type = VProductType, Categories = productCategories, ImgUrl = productImgs, RegularPrice = VProductPrice.ToString(), SalePrice = VProductSalePrice, Parent = productSKU, TaxClass = VProductTaxClass, InStock = 1, Stock = productStock, Tags = productTags, AttributeName = attributeName, AttributeValue = "20ml", AttributeGlobal = 0 };
+            //Create product object from 20ml variation product informations collected
+            var product20ml = new Product { Title = VProductTitle, Type = VProductType, Categories = productCategories, ImgUrl = productImgs, RegularPrice = VProductPrice.ToString(), SalePrice = VProductSalePrice, Parent = productSKU, TaxClass = VProductTaxClass, InStock = 1, Stock = size20mlStock, Tags = productTags, AttributeName = attributeName, AttributeValue = "20ml", AttributeGlobal = 0 };
             //Add to product list
             listVariableProduct.Add(product20ml);
 
@@ -426,10 +396,10 @@ namespace TikiCrawler
             VProductType = "variation";
             VProductParent = productSKU;
             VProductPrice = size30mlPrice.ToString();
-            VProductSalePrice = size30mlSalePrice.ToString();
+            VProductSalePrice = size30mlSalePrice;
 
-            //Create product object from 10ml variation product informations collected
-            var product30ml = new Product { Title = VProductTitle, Type = VProductType, Categories = productCategories, ImgUrl = productImgs, RegularPrice = VProductPrice.ToString(), SalePrice = VProductSalePrice, Parent = productSKU, TaxClass = VProductTaxClass, InStock = 1, Stock = productStock, Tags = productTags, AttributeName = attributeName, AttributeValue = "30ml", AttributeGlobal = 0 };
+            //Create product object from 30ml variation product informations collected
+            var product30ml = new Product { Title = VProductTitle, Type = VProductType, Categories = productCategories, ImgUrl = productImgs, RegularPrice = VProductPrice.ToString(), SalePrice = VProductSalePrice, Parent = productSKU, TaxClass = VProductTaxClass, InStock = 1, Stock = size30mlStock, Tags = productTags, AttributeName = attributeName, AttributeValue = "30ml", AttributeGlobal = 0 };
             //Add to product list
             listVariableProduct.Add(product30ml);
 
@@ -494,7 +464,8 @@ namespace TikiCrawler
         static void Main(string[] args)
         {
             //Define total number of product needed to get
-            int totalProductCount = 10;
+            //Each product have 4 variations
+            int totalProductCount = 200 * 5;
 
             //Create an instance of Chrome driver
             IWebDriver browser = new ChromeDriver();
@@ -531,7 +502,8 @@ namespace TikiCrawler
                     foreach (var productURLElement in productURLElements)
                     {
                         string productURL = productURLElement.GetAttribute("href");
-                        productURLs.Add(productURL);
+                        if (!HasSizeInURL(productURL))
+                            productURLs.Add(productURL);
                     }
                     //go to each product
                     foreach (string productURL in productURLs)
@@ -551,10 +523,6 @@ namespace TikiCrawler
                 
 
             }
-
-
-
-            //https://theperfume.vn/nuoc-hoa/nuoc-hoa-givenchy-play-intense/
 
             Export(productsData);
 
