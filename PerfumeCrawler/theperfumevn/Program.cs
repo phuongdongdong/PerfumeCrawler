@@ -15,16 +15,23 @@ namespace TikiCrawler
     class Product
     {
         public string Title { get; set; }
+        public string Type { get; set; }
         public string SKU { get; set; }
         public List<string> Categories { get; set; }
+        public string Parent { get; set; }
         public string RegularPrice { get; set; }
         public string SalePrice { get; set; }
         public string Description { get; set; }
         public string DetailInformation { get; set; }
+        public string TaxClass { get; set; }
         public int InStock { get; set; }
         public int Stock { get; set; }
         public List<string> Tags { get; set; }
         public List<string> ImgUrl { get; set; }
+        public string AttributeName { get; set; }
+        public string AttributeValue { get; set; }
+        public int AttributeVisible { get; set; }
+        public int AttributeGlobal { get; set; }
     }
     class Program
     {
@@ -40,7 +47,7 @@ namespace TikiCrawler
             decimal newPrice = fullsizePrice / fullSize * ratio * newSize;
             return newPrice;
         }
-        static Product GetProductData(IWebDriver browser, string productURL)
+        static List<Product> GetProductData(IWebDriver browser, string productURL)
         {
             try
             {
@@ -52,8 +59,10 @@ namespace TikiCrawler
             }
             //Declare product information variables
             string productTitle;
+            string productType;
             string productSKU = "";
             List<string> productCategories = new List<string>();
+            string productParent;
             List<string> productImgs = new List<string>();
             string productDetails;
             string productPrice;
@@ -61,6 +70,11 @@ namespace TikiCrawler
             string productDescription;
             int productStock;
             List<string> productTags = new List<string>();
+            string attributeName = "Size";
+            
+
+
+            List<Product> listVariableProduct = new List<Product>();
 
             // Wait for the page to load
             //browser.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(5);
@@ -82,6 +96,9 @@ namespace TikiCrawler
                 Console.WriteLine("Title not found");
                 return null;
             }
+
+            //Define product type
+            productType = "variable";
 
             //breadcrumb store brand and category information
             var breadcrumb = browser.FindElement(By.CssSelector(".breadcrumbs"));
@@ -168,7 +185,7 @@ namespace TikiCrawler
                 }
             }
 
-            Console.WriteLine("\n");
+            
             if (productImgs.Count == 0)
                 return null;
 
@@ -315,7 +332,7 @@ namespace TikiCrawler
             decimal size10mlPrice = CalPrice(10, fullsizeValue, fullsizePrice);
             decimal size20mlPrice = CalPrice(20, fullsizeValue, fullsizePrice);
             decimal size30mlPrice = CalPrice(30, fullsizeValue, fullsizePrice);
-            
+
             if (productDetails.Contains("mát") || productStock >30)
             {
                 decimal saleRate = 0.1m;
@@ -327,6 +344,7 @@ namespace TikiCrawler
                 productCategories.Add("Đang khuyến mãi");
             }
 
+
             //extract tags
             var tagLinks = browser.FindElements(By.CssSelector(".tagged_as a"));
             foreach( var tagLink in tagLinks)
@@ -334,11 +352,76 @@ namespace TikiCrawler
                 productTags.Add(tagLink.Text);
                 Console.WriteLine("tag: " + tagLink.Text);
             }
+
+            string attributeValues = "10ml, 20ml, 30ml, " + fullsizeValue + "ml";
+
             //Create product object from product informations collected
-            var product = new Product { Title = productTitle, SKU = productSKU, Categories = productCategories, ImgUrl = productImgs, Description = productDescription, DetailInformation = productDetails, RegularPrice = fullsizePrice.ToString(), SalePrice = productSalePrice, InStock = 1, Stock = productStock, Tags = productTags };
-            //Product product = new Product();
-            return product;
+            var product = new Product { Title = productTitle, Type = productType, SKU = productSKU, Categories = productCategories, ImgUrl = productImgs, Description = productDescription, DetailInformation = productDetails, RegularPrice = fullsizePrice.ToString(), SalePrice = productSalePrice, InStock = 1, Stock = productStock, Tags = productTags, AttributeName = attributeName, AttributeValue = attributeValues, AttributeVisible = 1, AttributeGlobal = 0 };
+            listVariableProduct.Add(product);
+
+
+            //Declare variation product information variables
+            string VProductTitle;
+            string VProductType;
+            //string VProductSKU = "";
+            //List<string> VProductCategories = new List<string>();
+            string VProductParent;
+            //List<string> VProductImgs = new List<string>();
+            //string VProductDetails;
+            string VProductPrice;
+            string VProductSalePrice;
+            //string VProductDescription;
+            string VProductTaxClass;
+            //int VProductStock;
+
+            //Fullsize variation product
+            VProductTitle = productTitle + " - " + fullsizeValue + "ml";
+            VProductType = "variation";
+            VProductParent = productSKU;
+            VProductPrice = fullsizePrice.ToString();
+            VProductTaxClass = "parent";
+
+            //Create product object from 10ml variation product informations collected
+            var productFullSize = new Product { Title = VProductTitle, Type = VProductType, Categories = productCategories, ImgUrl = productImgs, RegularPrice = VProductPrice.ToString(), Parent = productSKU, TaxClass = VProductTaxClass, InStock = 1, Stock = productStock, Tags = productTags, AttributeName = attributeName, AttributeValue = fullsizeValue + "ml", AttributeGlobal = 0 };
+            //Add to product list
+            listVariableProduct.Add(productFullSize);
+
+            //10ml variation product
+            VProductTitle = productTitle + " - 10ml";
+            VProductType = "variation";
+            VProductParent = productSKU;
+            VProductPrice = size10mlPrice.ToString();
+
+            //Create product object from 10ml variation product informations collected
+            var product10ml = new Product { Title = VProductTitle, Type = VProductType, Categories = productCategories, ImgUrl = productImgs, RegularPrice = VProductPrice.ToString(), Parent = productSKU, TaxClass = VProductTaxClass, InStock = 1, Stock = productStock, Tags = productTags, AttributeName = attributeName, AttributeValue = "10ml", AttributeGlobal = 0 };
+            //Add to product list
+            listVariableProduct.Add(product10ml);
+
+            //20ml variation product
+            VProductTitle = productTitle + " - 20ml";
+            VProductType = "variation";
+            VProductParent = productSKU;
+            VProductPrice = size20mlPrice.ToString();
+
+            //Create product object from 10ml variation product informations collected
+            var product20ml = new Product { Title = VProductTitle, Type = VProductType, Categories = productCategories, ImgUrl = productImgs, RegularPrice = VProductPrice.ToString(), Parent = productSKU, TaxClass = VProductTaxClass, InStock = 1, Stock = productStock, Tags = productTags, AttributeName = attributeName, AttributeValue = "20ml", AttributeGlobal = 0 };
+            //Add to product list
+            listVariableProduct.Add(product20ml);
+
+            //30ml variation product
+            VProductTitle = productTitle + " - 30ml";
+            VProductType = "variation";
+            VProductParent = productSKU;
+            VProductPrice = size30mlPrice.ToString();
+
+            //Create product object from 10ml variation product informations collected
+            var product30ml = new Product { Title = VProductTitle, Type = VProductType, Categories = productCategories, ImgUrl = productImgs, RegularPrice = VProductPrice.ToString(), Parent = productSKU, TaxClass = VProductTaxClass, InStock = 1, Stock = productStock, Tags = productTags, AttributeName = attributeName, AttributeValue = "30ml", AttributeGlobal = 0 };
+            //Add to product list
+            listVariableProduct.Add(product30ml);
+
+            return listVariableProduct;
         }
+
         static void Export(List<Product> productsData)
         {
             //Config delimiter
@@ -352,7 +435,9 @@ namespace TikiCrawler
                 //Write data header
                 csv.WriteField("Name");
                 csv.WriteField("SKU");
+                csv.WriteField("Type");
                 csv.WriteField("Categories");
+                csv.WriteField("Parent");
                 csv.WriteField("Regular Price");
                 csv.WriteField("Sale Price");
                 csv.WriteField("Images");
@@ -361,6 +446,10 @@ namespace TikiCrawler
                 csv.WriteField("In stock?");
                 csv.WriteField("Stock");
                 csv.WriteField("Tags");
+                csv.WriteField("Attribute 1 Name");
+                csv.WriteField("Attribute 1 Value(s)");
+                csv.WriteField("Attribute 1 Visible");
+                csv.WriteField("Attribute 1 Global");
                 csv.NextRecord();
 
                 // Write the data rows
@@ -368,7 +457,9 @@ namespace TikiCrawler
                 {
                     csv.WriteField(product.Title);
                     csv.WriteField(product.SKU);
+                    csv.WriteField(product.Type);
                     csv.WriteField(string.Join(",", product.Categories));
+                    csv.WriteField(product.Parent);
                     csv.WriteField(product.RegularPrice);
                     csv.WriteField(product.SalePrice);
                     csv.WriteField(string.Join(",", product.ImgUrl));
@@ -377,6 +468,10 @@ namespace TikiCrawler
                     csv.WriteField(product.InStock);
                     csv.WriteField(product.Stock);
                     csv.WriteField(string.Join(",", product.Tags));
+                    csv.WriteField(product.AttributeName);
+                    csv.WriteField(product.AttributeValue);
+                    csv.WriteField(product.AttributeVisible);
+                    csv.WriteField(product.AttributeGlobal);
                     csv.NextRecord();
                 }
 
@@ -385,7 +480,7 @@ namespace TikiCrawler
         static void Main(string[] args)
         {
             //Define total number of product needed to get
-            int totalProductCount = 10;
+            int totalProductCount = 1;
 
             //Create an instance of Chrome driver
             IWebDriver browser = new ChromeDriver();
@@ -429,9 +524,9 @@ namespace TikiCrawler
                     {
                         if (productsData.Count >= totalProductCount)
                             break;
-                        Product productData = GetProductData(browser, productURL);
+                        List<Product> productData = GetProductData(browser, productURL);
                         if (productData != null)
-                            productsData.Add(productData);
+                            productsData.AddRange(productData);
                     }
                     //not get enough products, go to next page
                     if (productsData.Count < totalProductCount)
