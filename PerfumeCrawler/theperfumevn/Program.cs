@@ -494,7 +494,7 @@ namespace TikiCrawler
         static void Main(string[] args)
         {
             //Define total number of product needed to get
-            int totalProductCount = 1;
+            int totalProductCount = 10;
 
             //Create an instance of Chrome driver
             IWebDriver browser = new ChromeDriver();
