@@ -333,16 +333,7 @@ namespace TikiCrawler
             decimal size20mlPrice = CalPrice(20, fullsizeValue, fullsizePrice);
             decimal size30mlPrice = CalPrice(30, fullsizeValue, fullsizePrice);
 
-            if (productDetails.Contains("mát") || productStock >30)
-            {
-                decimal saleRate = 0.1m;
-                decimal size10mlSalePrice = size10mlPrice * (1 - saleRate);
-                decimal size20mlSalePrice = size20mlPrice * (1 - saleRate);
-                decimal size30mlSalePrice = size30mlPrice * (1 - saleRate);
-                productSalePrice = (fullsizePrice * (1 - saleRate)).ToString();
-                Console.WriteLine("product is on sale");
-                productCategories.Add("Đang khuyến mãi");
-            }
+            
 
 
             //extract tags
@@ -374,48 +365,71 @@ namespace TikiCrawler
             string VProductTaxClass;
             //int VProductStock;
 
+            //Calculate sale price for variation
+            decimal? size10mlSalePrice = null;
+            decimal? size20mlSalePrice = null;
+            decimal? size30mlSalePrice = null;
+
+            if (productDetails.Contains("mát") || productStock > 30)
+            {
+                decimal saleRate = 0.1m;
+                size10mlSalePrice = size10mlPrice * (1 - saleRate);
+                size20mlSalePrice = size20mlPrice * (1 - saleRate);
+                size30mlSalePrice = size30mlPrice * (1 - saleRate);
+                productSalePrice = (fullsizePrice * (1 - saleRate)).ToString();
+                Console.WriteLine("product is on sale");
+                productCategories.Add("Đang khuyến mãi");
+            }
+
             //Fullsize variation product
             VProductTitle = productTitle + " - " + fullsizeValue + "ml";
             VProductType = "variation";
             VProductParent = productSKU;
             VProductPrice = fullsizePrice.ToString();
+            VProductSalePrice= productSalePrice.ToString();
             VProductTaxClass = "parent";
 
             //Create product object from 10ml variation product informations collected
-            var productFullSize = new Product { Title = VProductTitle, Type = VProductType, Categories = productCategories, ImgUrl = productImgs, RegularPrice = VProductPrice.ToString(), Parent = productSKU, TaxClass = VProductTaxClass, InStock = 1, Stock = productStock, Tags = productTags, AttributeName = attributeName, AttributeValue = fullsizeValue + "ml", AttributeGlobal = 0 };
+            var productFullSize = new Product { Title = VProductTitle, Type = VProductType, Categories = productCategories, ImgUrl = productImgs, RegularPrice = VProductPrice.ToString(), SalePrice = VProductSalePrice, Parent = productSKU, TaxClass = VProductTaxClass, InStock = 1, Stock = productStock, Tags = productTags, AttributeName = attributeName, AttributeValue = fullsizeValue + "ml", AttributeGlobal = 0 };
             //Add to product list
             listVariableProduct.Add(productFullSize);
+
 
             //10ml variation product
             VProductTitle = productTitle + " - 10ml";
             VProductType = "variation";
             VProductParent = productSKU;
             VProductPrice = size10mlPrice.ToString();
+            VProductSalePrice = size10mlSalePrice.ToString();
 
             //Create product object from 10ml variation product informations collected
-            var product10ml = new Product { Title = VProductTitle, Type = VProductType, Categories = productCategories, ImgUrl = productImgs, RegularPrice = VProductPrice.ToString(), Parent = productSKU, TaxClass = VProductTaxClass, InStock = 1, Stock = productStock, Tags = productTags, AttributeName = attributeName, AttributeValue = "10ml", AttributeGlobal = 0 };
+            var product10ml = new Product { Title = VProductTitle, Type = VProductType, Categories = productCategories, ImgUrl = productImgs, RegularPrice = VProductPrice.ToString(), SalePrice = VProductSalePrice, Parent = productSKU, TaxClass = VProductTaxClass, InStock = 1, Stock = productStock, Tags = productTags, AttributeName = attributeName, AttributeValue = "10ml", AttributeGlobal = 0 };
             //Add to product list
             listVariableProduct.Add(product10ml);
+
 
             //20ml variation product
             VProductTitle = productTitle + " - 20ml";
             VProductType = "variation";
             VProductParent = productSKU;
             VProductPrice = size20mlPrice.ToString();
+            VProductSalePrice= size20mlSalePrice.ToString();
 
             //Create product object from 10ml variation product informations collected
-            var product20ml = new Product { Title = VProductTitle, Type = VProductType, Categories = productCategories, ImgUrl = productImgs, RegularPrice = VProductPrice.ToString(), Parent = productSKU, TaxClass = VProductTaxClass, InStock = 1, Stock = productStock, Tags = productTags, AttributeName = attributeName, AttributeValue = "20ml", AttributeGlobal = 0 };
+            var product20ml = new Product { Title = VProductTitle, Type = VProductType, Categories = productCategories, ImgUrl = productImgs, RegularPrice = VProductPrice.ToString(), SalePrice = VProductSalePrice, Parent = productSKU, TaxClass = VProductTaxClass, InStock = 1, Stock = productStock, Tags = productTags, AttributeName = attributeName, AttributeValue = "20ml", AttributeGlobal = 0 };
             //Add to product list
             listVariableProduct.Add(product20ml);
+
 
             //30ml variation product
             VProductTitle = productTitle + " - 30ml";
             VProductType = "variation";
             VProductParent = productSKU;
             VProductPrice = size30mlPrice.ToString();
+            VProductSalePrice = size30mlSalePrice.ToString();
 
             //Create product object from 10ml variation product informations collected
-            var product30ml = new Product { Title = VProductTitle, Type = VProductType, Categories = productCategories, ImgUrl = productImgs, RegularPrice = VProductPrice.ToString(), Parent = productSKU, TaxClass = VProductTaxClass, InStock = 1, Stock = productStock, Tags = productTags, AttributeName = attributeName, AttributeValue = "30ml", AttributeGlobal = 0 };
+            var product30ml = new Product { Title = VProductTitle, Type = VProductType, Categories = productCategories, ImgUrl = productImgs, RegularPrice = VProductPrice.ToString(), SalePrice = VProductSalePrice, Parent = productSKU, TaxClass = VProductTaxClass, InStock = 1, Stock = productStock, Tags = productTags, AttributeName = attributeName, AttributeValue = "30ml", AttributeGlobal = 0 };
             //Add to product list
             listVariableProduct.Add(product30ml);
 
