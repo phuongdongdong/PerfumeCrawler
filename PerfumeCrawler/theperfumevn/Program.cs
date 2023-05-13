@@ -309,7 +309,10 @@ namespace TikiCrawler
             decimal size20mlPrice = CalPrice(20, fullsizeValue, fullsizePrice);
             decimal size30mlPrice = CalPrice(30, fullsizeValue, fullsizePrice);
 
-            
+            //Rounding price of variants
+            size10mlPrice = Math.Floor(size10mlPrice / 1000) * 1000;
+            size20mlPrice = Math.Floor(size20mlPrice / 1000) * 1000;
+            size30mlPrice = Math.Floor(size30mlPrice / 1000) * 1000;
 
 
             //Get tags
@@ -343,10 +346,11 @@ namespace TikiCrawler
             if (productDetails.Contains("mát") || productStock > 30)
             {
                 decimal saleRate = 0.1m;
-                size10mlSalePrice = (size10mlPrice * (1 - saleRate)).ToString();
-                size20mlSalePrice = (size20mlPrice * (1 - saleRate)).ToString();
-                size30mlSalePrice = (size30mlPrice * (1 - saleRate)).ToString();
-                productSalePrice = (fullsizePrice * (1 - saleRate)).ToString();
+                size10mlSalePrice = (Math.Floor((size10mlPrice * (1 - saleRate)) / 1000 ) * 1000).ToString();
+                size20mlSalePrice = (Math.Floor((size20mlPrice * (1 - saleRate)) / 1000 ) * 1000).ToString();
+                size30mlSalePrice = (Math.Floor((size30mlPrice * (1 - saleRate)) / 1000 ) * 1000).ToString();
+                productSalePrice = (Math.Floor((fullsizePrice * (1 - saleRate)) / 1000 ) * 1000).ToString();
+
                 Console.WriteLine("product is on sale");
                 productCategories.Add("Đang khuyến mãi");
             }
@@ -465,7 +469,7 @@ namespace TikiCrawler
         {
             //Define total number of product needed to get
             //Each product have 4 variations
-            int totalProductCount = 200 * 5;
+            int totalProductCount = 1;
 
             //Create an instance of Chrome driver
             IWebDriver browser = new ChromeDriver();
