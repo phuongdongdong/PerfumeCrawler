@@ -113,7 +113,8 @@ namespace TikiCrawler
             try
             {
                 productCategory = breadcrumb.FindElement(By.CssSelector("a:nth-of-type(3)")).Text;
-                if (productCategory == "Nước hoa nam")
+                Console.WriteLine(productCategory);
+                if (productCategory.ToLower() == "nước hoa nam")
                 {
                     productCategory = "Dành cho nam";
                 }
